@@ -19,11 +19,13 @@ Each game file follows the same pattern:
 
 ## Git Workflow
 
-All changes should be committed and pushed to GitHub after each meaningful change:
+**Commit and push to GitHub after every meaningful unit of work** — after adding a feature, fixing a bug, or completing any discrete change. Never leave work uncommitted at the end of a task. This ensures we can always revert to a known good state and never lose progress.
+
+Commit messages should be concise and descriptive, explaining what changed and why:
 
 ```bash
 git add <file>
-git commit -m "descriptive message"
+git commit -m "short description of what changed and why"
 git push
 ```
 
