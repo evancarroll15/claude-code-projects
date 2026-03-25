@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Spin the Bottle</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      background: radial-gradient(ellipse at center, #1a0533 0%, #0d001a 100%);
+      font-family: 'Segoe UI', sans-serif;
+      color: #eee;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 1.5rem 1rem 2rem;
+    }
+
+    h1 {
+      font-size: 2.4rem;
+      margin-bottom: 0.2rem;
+      background: linear-gradient(90deg, #ff6eb4, #ffd166, #ff6eb4);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    p.subtitle {
+      color: #a06cb0;
+      margin-bottom: 1.5rem;
+      font-size: 0.95rem;
+    }
+
+    /* ── Player Setup ── */
+    #setup {
+      width: 100%;
+      max-width: 460px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 16px;
+      padding: 1.2rem 1.4rem;
+      margin-bottom: 1.5rem;
+    }
+
+    #setup h2 { font-size: 1rem; color: #c084d8; margin-bottom: 0.8rem; letter-spacing: 0.05em; }
+
+    .add-row {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 0.8rem;
+    }
+
+    #nameInput {
+      flex: 1;
+      padding: 0.55rem 0.9rem;
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.15);
+      background: rgba(255,255,255,0.07);
+      color: #eee;
+      font-size: 0.95rem;
+      outline: none;
+    }
+
+    #nameInput:focus { border-color: #ff6eb4; }
+
+    button.add-btn {
+      padding: 0.55rem 1.1rem;
+      border-radius: 8px;
+      border: none;
+      background: #8b2fc9;
+      color: #fff;
+      cursor: pointer;
+      font-size: 0.95rem;
+      transition: background 0.2s;
+    }
+
+    button.add-btn:hover { background: #a044e0; }
+
+    #playerList {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .player-tag {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: rgba(139,47,201,0.25);
+      border: 1px solid rgba(139,47,201,0.5);
+      border-radius: 20px;
+      padding: 0.3rem 0.75rem;
+      font-size: 0.88rem;
+    }
+
+    .player-tag button {
+      background: none;
+      border: none;
+      color: #e06ef0;
+      cursor: pointer;
+      font-size: 0.9rem;
+      line-height: 1;
+      padding: 0;
+    }
+
+    /* ── Wheel ── */
+    #game { display: none; flex-direction: column; align-items: center; width: 100%; }
+
+    #wheel-wrap {
+      position: relative;
+      width: 320px;
+      height: 320px;
+      margin-bottom: 1.2rem;
+    }
+
+    #wheel-canvas { border-radius: 50%; }
+
+    /* bottle SVG centered */
+    #bottle-layer {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+    }
+
+    #bottle-svg {
+      transform-origin: center center;
+      transition: transform 0s;
+      width: 260px;
+      height: 260px;
+    }
+
+    /* spin button */
+    #spinBtn {
+      margin-top: 0.2rem;
+      padding: 0.8rem 3rem;
+      font-size: 1.15rem;
+      border: none;
+      border-radius: 50px;
+      background: linear-gradient(135deg, #e040fb, #ff6eb4);
+      color: #fff;
+      cursor: pointer;
+      letter-spacing: 0.06em;
+      box-shadow: 0 4px 24px rgba(224,64,251,0.35);
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+
+    #spinBtn:hover:not(:disabled) { transform: scale(1.05); box-shadow: 0 6px 30px rgba(224,64,251,0.5); }
+    #spinBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* result */
+    #result {
+      margin-top: 1.4rem;
+      font-size: 1.4rem;
+      min-height: 2rem;
+      text-align: center;
+      transition: opacity 0.4s;
+    }
+
+    #result .name { color: #ffd166; font-weight: bold; font-size: 1.7rem; }
+
+    /* back button */
+    #backBtn {
+      margin-top: 1.2rem;
+      background: none;
+      border: 1px solid rgba(255,255,255,0.2);
+      color: #a06cb0;
+      padding: 0.45rem 1.2rem;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.88rem;
+      transition: border-color 0.2s, color 0.2s;
+    }
+
+    #backBtn:hover { border-color: #ff6eb4; color: #ff6eb4; }
+
+    #startBtn {
+      width: 100%;
+      max-width: 460px;
+      padding: 0.75rem;
+      border: none;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #8b2fc9, #e040fb);
+      color: #fff;
+      font-size: 1.05rem;
+      cursor: pointer;
+      letter-spacing: 0.05em;
+      transition: opacity 0.2s, transform 0.15s;
+    }
+
+    #startBtn:hover { transform: scale(1.02); }
+    #startBtn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .hint { font-size: 0.8rem; color: #7a4e8a; margin-top: 0.5rem; }
+  </style>
+</head>
+<body>
+
+<h1>Spin the Bottle</h1>
+<p class="subtitle">Add players, then let fate decide!</p>
+
+<!-- Setup -->
+<div id="setup">
+  <h2>PLAYERS</h2>
+  <div class="add-row">
+    <input id="nameInput" type="text" placeholder="Enter a name..." maxlength="20">
+    <button class="add-btn" onclick="addPlayer()">Add</button>
+  </div>
+  <div id="playerList"></div>
+</div>
+
+<button id="startBtn" disabled onclick="startGame()">Start Game</button>
+<p class="hint" id="hint">Add at least 2 players to start</p>
+
+<!-- Game -->
+<div id="game">
+  <div id="wheel-wrap">
+    <canvas id="wheel-canvas" width="320" height="320"></canvas>
+    <div id="bottle-layer">
+      <!-- Bottle SVG -->
+      <svg id="bottle-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <!-- glow filter -->
+        <defs>
+          <filter id="glow">
+            <feGaussianBlur stdDeviation="2.5" result="blur"/>
+            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <linearGradient id="bottleGrad" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stop-color="#3ad6a0"/>
+            <stop offset="50%" stop-color="#7ef7c8"/>
+            <stop offset="100%" stop-color="#3ad6a0"/>
+          </linearGradient>
+        </defs>
+        <!-- bottle pointing RIGHT (3 o'clock = angle 0) -->
+        <!-- body -->
+        <rect x="32" y="43" width="34" height="14" rx="5" fill="url(#bottleGrad)" filter="url(#glow)" opacity="0.92"/>
+        <!-- neck -->
+        <rect x="62" y="46" width="12" height="8" rx="3" fill="url(#bottleGrad)" opacity="0.92"/>
+        <!-- cap -->
+        <rect x="73" y="45.5" width="4" height="9" rx="2" fill="#ffd166"/>
+        <!-- highlight -->
+        <rect x="35" y="45" width="24" height="3" rx="1.5" fill="rgba(255,255,255,0.35)"/>
+      </svg>
+    </div>
+  </div>
+
+  <button id="spinBtn" onclick="spin()">SPIN</button>
+  <div id="result"></div>
+  <button id="backBtn" onclick="showSetup()">Edit Players</button>
+</div>
+
+<script>
+  // ── State ──────────────────────────────────────────────────────────────
+  let players = [];
+  let spinning = false;
+  let currentAngle = 0; // degrees, bottle SVG points right at 0
+
+  // ── Palette for wheel segments ──────────────────────────────────────────
+  const PALETTE = [
+    '#6a0dad','#9b30d0','#c060e8','#e040fb',
+    '#ff6eb4','#ff9de2','#d45cb8','#a03090'
+  ];
+
+  // ── Player management ──────────────────────────────────────────────────
+  function addPlayer() {
+    const input = document.getElementById('nameInput');
+    const name  = input.value.trim();
+    if (!name || players.includes(name)) { input.focus(); return; }
+    players.push(name);
+    input.value = '';
+    input.focus();
+    renderPlayerList();
+  }
+
+  document.getElementById('nameInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') addPlayer();
+  });
+
+  function removePlayer(i) {
+    players.splice(i, 1);
+    renderPlayerList();
+  }
+
+  function renderPlayerList() {
+    const list = document.getElementById('playerList');
+    list.innerHTML = players.map((p, i) =>
+      `<span class="player-tag">${p}<button onclick="removePlayer(${i})" title="Remove">✕</button></span>`
+    ).join('');
+
+    const btn  = document.getElementById('startBtn');
+    const hint = document.getElementById('hint');
+    btn.disabled = players.length < 2;
+    hint.textContent = players.length < 2
+      ? `Add at least 2 players to start (${players.length} added)`
+      : `${players.length} players — ready to spin!`;
+  }
+
+  // ── Start / Back ────────────────────────────────────────────────────────
+  function startGame() {
+    document.getElementById('setup').style.display  = 'none';
+    document.getElementById('startBtn').style.display = 'none';
+    document.getElementById('hint').style.display   = 'none';
+    document.getElementById('game').style.display   = 'flex';
+    currentAngle = 0;
+    setBottleAngle(0);
+    drawWheel();
+    document.getElementById('result').innerHTML = '';
+  }
+
+  function showSetup() {
+    document.getElementById('setup').style.display  = '';
+    document.getElementById('startBtn').style.display = '';
+    document.getElementById('hint').style.display   = '';
+    document.getElementById('game').style.display   = 'none';
+    renderPlayerList();
+  }
+
+  // ── Wheel drawing ───────────────────────────────────────────────────────
+  function drawWheel() {
+    const canvas = document.getElementById('wheel-canvas');
+    const ctx    = canvas.getContext('2d');
+    const cx = canvas.width  / 2;
+    const cy = canvas.height / 2;
+    const r  = cx - 8;
+    const n  = players.length;
+    const arc = (2 * Math.PI) / n;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    players.forEach((name, i) => {
+      const start = i * arc - Math.PI / 2;
+      const end   = start + arc;
+
+      // segment
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.arc(cx, cy, r, start, end);
+      ctx.closePath();
+      ctx.fillStyle = PALETTE[i % PALETTE.length];
+      ctx.fill();
+      ctx.strokeStyle = '#1a0533';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // label
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(start + arc / 2);
+      ctx.textAlign = 'right';
+      ctx.fillStyle = '#fff';
+      ctx.font = `bold ${Math.min(14, 80 / n + 4)}px Segoe UI`;
+      ctx.shadowColor = 'rgba(0,0,0,0.6)';
+      ctx.shadowBlur  = 4;
+      ctx.fillText(name, r - 10, 5);
+      ctx.restore();
+    });
+
+    // centre dot
+    ctx.beginPath();
+    ctx.arc(cx, cy, 10, 0, 2 * Math.PI);
+    ctx.fillStyle = '#1a0533';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+
+  // ── Bottle animation ────────────────────────────────────────────────────
+  function setBottleAngle(deg) {
+    document.getElementById('bottle-svg').style.transform = `rotate(${deg}deg)`;
+  }
+
+  function spin() {
+    if (spinning) return;
+    spinning = true;
+    document.getElementById('spinBtn').disabled = true;
+    document.getElementById('result').innerHTML = '';
+
+    const n       = players.length;
+    const winner  = Math.floor(Math.random() * n);
+
+    // angle of target segment centre (wheel is static, bottle rotates)
+    // segment i centre (from top, going clockwise) = i * (360/n) + (360/n)/2
+    // we want bottle (pointing right = 90deg offset from top) to land there
+    const segCentre = winner * (360 / n) + (360 / n) / 2; // degrees from top (12 o'clock)
+    // bottle points right; to point UP = -90 from right; so target = segCentre - 90
+    const targetAngle = segCentre - 90;
+
+    const extraSpins = 5 + Math.floor(Math.random() * 5); // 5-9 full rotations
+    const finalAngle = currentAngle + extraSpins * 360 + ((targetAngle - currentAngle % 360) + 360) % 360;
+
+    // Animate with easeOut
+    const duration   = 3000 + Math.random() * 1000;
+    const startAngle = currentAngle;
+    const startTime  = performance.now();
+
+    function easeOut(t) { return 1 - Math.pow(1 - t, 4); }
+
+    function frame(now) {
+      const elapsed = now - startTime;
+      const t       = Math.min(elapsed / duration, 1);
+      const angle   = startAngle + (finalAngle - startAngle) * easeOut(t);
+      setBottleAngle(angle);
+
+      if (t < 1) {
+        requestAnimationFrame(frame);
+      } else {
+        currentAngle = finalAngle % 360;
+        spinning = false;
+        document.getElementById('spinBtn').disabled = false;
+        showResult(players[winner]);
+      }
+    }
+
+    requestAnimationFrame(frame);
+  }
+
+  function showResult(name) {
+    const result = document.getElementById('result');
+    result.style.opacity = 0;
+    result.innerHTML = `The bottle chose<br><span class="name">${name}</span>!`;
+    requestAnimationFrame(() => {
+      result.style.transition = 'opacity 0.5s';
+      result.style.opacity = 1;
+    });
+  }
+
+  // ── Init ────────────────────────────────────────────────────────────────
+  renderPlayerList();
+</script>
+</body>
+</html>
