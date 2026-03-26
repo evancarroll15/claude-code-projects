@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Evan Carroll — Financial Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #0d1117;
+  --surface: #161b22;
+  --surface2: #21262d;
+  --border: #30363d;
+  --text: #c9d1d9;
+  --muted: #8b949e;
+  --accent: #58a6ff;
+  --green: #3fb950;
+  --red: #f85149;
+  --orange: #d29922;
+  --purple: #bc8cff;
+  --yellow: #e3b341;
+  --cyan: #39d0f0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  padding: 28px 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* ── HEADER ── */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 32px;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--border);
+}
+.header h1 { font-size: 1.7rem; font-weight: 700; letter-spacing: -0.02em; }
+.header .subtitle { color: var(--muted); font-size: 0.9rem; margin-top: 6px; }
+.period-badge {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 6px 16px;
+  font-size: 0.8rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* ── SECTION TITLES ── */
+.section-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin-bottom: 14px;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.section-title::before {
+  content: '';
+  display: block;
+  width: 3px;
+  height: 16px;
+  background: var(--accent);
+  border-radius: 2px;
+}
+
+/* ── KPI CARDS ── */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(185px, 1fr));
+  gap: 14px;
+  margin-bottom: 32px;
+}
+.kpi-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px 20px;
+  position: relative;
+  overflow: hidden;
+}
+.kpi-card::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+}
+.kpi-card.green::after  { background: var(--green); }
+.kpi-card.blue::after   { background: var(--accent); }
+.kpi-card.orange::after { background: var(--orange); }
+.kpi-card.purple::after { background: var(--purple); }
+.kpi-card.red::after    { background: var(--red); }
+.kpi-card.cyan::after   { background: var(--cyan); }
+.kpi-card .label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin-bottom: 10px; }
+.kpi-card .value { font-size: 1.55rem; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1; }
+.kpi-card.green .value  { color: var(--green); }
+.kpi-card.blue .value   { color: var(--accent); }
+.kpi-card.orange .value { color: var(--orange); }
+.kpi-card.purple .value { color: var(--purple); }
+.kpi-card.red .value    { color: var(--red); }
+.kpi-card.cyan .value   { color: var(--cyan); }
+.kpi-card .sub { font-size: 0.78rem; color: var(--muted); margin-top: 6px; line-height: 1.4; }
+
+/* ── FILTER BUTTONS ── */
+.filter-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.filter-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+.btn {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  border-radius: 6px;
+  padding: 5px 14px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+}
+.btn:hover { border-color: var(--accent); color: var(--text); }
+.btn.active { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+
+/* ── CHART CARDS ── */
+.charts-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+@media (max-width: 860px) { .charts-row { grid-template-columns: 1fr; } }
+
+.chart-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+}
+.chart-card h2 { font-size: 0.9rem; font-weight: 600; color: var(--text); margin-bottom: 16px; }
+.chart-canvas-wrap { position: relative; height: 260px; }
+
+/* ── TABLE ── */
+.table-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 28px;
+  overflow-x: auto;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.83rem;
+  min-width: 780px;
+}
+th {
+  text-align: right;
+  padding: 9px 12px;
+  color: var(--muted);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border-bottom: 1px solid var(--border);
+  font-weight: 600;
+}
+th:first-child { text-align: left; }
+td {
+  text-align: right;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  font-variant-numeric: tabular-nums;
+}
+td:first-child { text-align: left; font-weight: 600; }
+tbody tr:hover { background: rgba(88,166,255,0.04); }
+tbody tr:last-child td { border-bottom: none; font-weight: 700; background: var(--surface2); }
+.pos { color: var(--green); }
+.neg { color: var(--red); }
+.blu { color: var(--accent); }
+.ylw { color: var(--yellow); }
+.prp { color: var(--purple); }
+.dim { color: var(--muted); }
+
+/* ── INVEST GRID ── */
+.invest-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 14px;
+  margin-bottom: 28px;
+}
+.invest-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px 20px;
+}
+.invest-card .label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin-bottom: 8px; }
+.invest-card .amount { font-size: 1.4rem; font-weight: 700; margin-bottom: 6px; }
+.invest-card .detail { font-size: 0.78rem; color: var(--muted); line-height: 1.5; }
+
+/* ── BUDGET BARS ── */
+.budget-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 28px;
+}
+.budget-row {
+  display: grid;
+  grid-template-columns: 200px 1fr 60px;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+.budget-row:last-child { border-bottom: none; }
+.budget-label strong { font-size: 0.9rem; display: block; }
+.budget-label span { font-size: 0.78rem; color: var(--muted); }
+.budget-bar-wrap {
+  background: var(--surface2);
+  border-radius: 4px;
+  height: 10px;
+  overflow: hidden;
+}
+.budget-bar { height: 100%; border-radius: 4px; transition: width 0.5s ease; }
+.budget-pct { text-align: right; font-size: 0.88rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* ── ALERTS ── */
+.alerts { display: flex; flex-direction: column; gap: 12px; margin-bottom: 28px; }
+.alert {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 4px solid;
+  border-radius: 8px;
+  padding: 14px 18px;
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+.alert.warn   { border-left-color: var(--orange); }
+.alert.danger { border-left-color: var(--red); }
+.alert.good   { border-left-color: var(--green); }
+.alert.info   { border-left-color: var(--accent); }
+.alert strong { display: block; margin-bottom: 4px; font-size: 0.9rem; }
+.alert.warn strong   { color: var(--orange); }
+.alert.danger strong { color: var(--red); }
+.alert.good strong   { color: var(--green); }
+.alert.info strong   { color: var(--accent); }
+
+/* ── INSIGHTS GRID ── */
+.insights-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+  gap: 14px;
+  margin-bottom: 32px;
+}
+.insight-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px 20px;
+}
+.insight-card .icon { font-size: 1.3rem; margin-bottom: 10px; }
+.insight-card h2 { font-size: 0.95rem; margin-bottom: 8px; }
+.insight-card p { font-size: 0.83rem; color: var(--muted); line-height: 1.65; }
+.insight-card p strong { color: var(--text); }
+
+/* ── FOOTER ── */
+footer {
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.75rem;
+  margin-top: 40px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+</style>
+</head>
+<body>
+
+<!-- ══ HEADER ══ -->
+<div class="header">
+  <div>
+    <h1>Evan Carroll — Financial Dashboard</h1>
+    <div class="subtitle">Your Glow Up LLC · Brex Business Checking · Feb 2025 – Feb 2026</div>
+  </div>
+  <div class="period-badge">Last updated: 26 Mar 2026</div>
+</div>
+
+<!-- ══ KPI CARDS ══ -->
+<div class="section-title">Overview</div>
+<div class="kpi-grid">
+  <div class="kpi-card green">
+    <div class="label">Total Business Revenue</div>
+    <div class="value">$582,451</div>
+    <div class="sub">13 months · Feb 2025 – Feb 2026</div>
+  </div>
+  <div class="kpi-card blue">
+    <div class="label">Avg Monthly Revenue</div>
+    <div class="value">$26,120</div>
+    <div class="sub">Excl. Feb 2025 outlier ($269k)</div>
+  </div>
+  <div class="kpi-card orange">
+    <div class="label">Personal Draw (Total)</div>
+    <div class="value">$199,976</div>
+    <div class="sub">Wired to Revolut IE · 34% of revenue</div>
+  </div>
+  <div class="kpi-card purple">
+    <div class="label">Total Deployed to Investments</div>
+    <div class="value">$302,725</div>
+    <div class="sub">IB $285,225 · Crypto $17,500 · 52% of revenue</div>
+  </div>
+  <div class="kpi-card red">
+    <div class="label">Business Expenses (Brex Card)</div>
+    <div class="value">$36,484</div>
+    <div class="sub">6.3% of revenue · 13 months</div>
+  </div>
+  <div class="kpi-card cyan">
+    <div class="label">Professional Services</div>
+    <div class="value">$16,683</div>
+    <div class="sub">MSI Auditors FZCO · Jun–Jul 2025</div>
+  </div>
+</div>
+
+<!-- ══ CASHFLOW CHARTS ══ -->
+<div class="filter-row">
+  <div class="section-title" style="margin-bottom:0">Monthly Cash Flow</div>
+  <div class="filter-btns" id="filterBtns">
+    <button class="btn active" onclick="setFilter('all',this)">All Months</button>
+    <button class="btn" onclick="setFilter('2025',this)">2025 Only</button>
+    <button class="btn" onclick="setFilter('2026',this)">2026 Only</button>
+  </div>
+</div>
+
+<div class="charts-row">
+  <div class="chart-card">
+    <h2>Revenue vs Total Outflows</h2>
+    <div class="chart-canvas-wrap"><canvas id="cashflowChart"></canvas></div>
+  </div>
+  <div class="chart-card">
+    <h2>Where Money Goes (All Time)</h2>
+    <div class="chart-canvas-wrap"><canvas id="donutChart"></canvas></div>
+  </div>
+</div>
+
+<div class="chart-card" style="margin-bottom:28px">
+  <h2>Monthly Spending by Category</h2>
+  <div class="chart-canvas-wrap" style="height:300px"><canvas id="stackedChart"></canvas></div>
+</div>
+
+<!-- ══ ACCOUNT BALANCE ══ -->
+<div class="chart-card" style="margin-bottom:28px">
+  <h2>Checking Account Balance (End of Month)</h2>
+  <div class="chart-canvas-wrap" style="height:200px"><canvas id="balanceChart"></canvas></div>
+</div>
+
+<!-- ══ INVESTMENT TRACKER ══ -->
+<div class="section-title">Investment Portfolio</div>
+<div class="invest-grid">
+  <div class="invest-card">
+    <div class="label">Interactive Brokers</div>
+    <div class="amount" style="color:var(--accent)">$285,225 deployed</div>
+    <div class="detail">
+      Jun 25: $194,001 &nbsp;·&nbsp; Sep 25: $30,000<br>
+      Oct 25: $5,000 &nbsp;·&nbsp; Nov 25: $7,500<br>
+      Dec 25: $17,000 &nbsp;·&nbsp; Jan 26: $10,000<br>
+      Feb 26: $21,724 &nbsp;·&nbsp; Return: −$10,000<br>
+      <strong style="color:var(--text)">Net deployed: $275,225</strong>
+    </div>
+  </div>
+  <div class="invest-card">
+    <div class="label">Kraken (Crypto)</div>
+    <div class="amount" style="color:var(--yellow)">$17,500 deployed</div>
+    <div class="detail">
+      May 2025: $5,000<br>
+      Jun 2025: $12,500<br>
+      No further purchases recorded.<br>
+      Consider a regular DCA schedule.
+    </div>
+  </div>
+  <div class="invest-card">
+    <div class="label">Brex Treasury (6883)</div>
+    <div class="amount" style="color:var(--green)">Active Buffer</div>
+    <div class="detail">
+      Used as a money-market savings buffer. Large sums ($100k–$154k) are accumulated in Treasury before being deployed to Interactive Brokers in lump sums.
+    </div>
+  </div>
+  <div class="invest-card">
+    <div class="label">Investment Rate</div>
+    <div class="amount" style="color:var(--purple)">52.0%</div>
+    <div class="detail">
+      $302,725 of $582,451 total revenue deployed to investments. Excellent — most advisors target 20–30%. You are building wealth aggressively.
+    </div>
+  </div>
+</div>
+
+<!-- ══ MONTH BY MONTH TABLE ══ -->
+<div class="section-title">Month-by-Month Breakdown</div>
+<div class="table-card">
+  <table>
+    <thead>
+      <tr>
+        <th>Month</th>
+        <th>Revenue</th>
+        <th>Personal Draw</th>
+        <th>IB Invest</th>
+        <th>Crypto</th>
+        <th>Brex Card</th>
+        <th>Prof. Svcs</th>
+        <th>End Balance</th>
+      </tr>
+    </thead>
+    <tbody id="detailBody"></tbody>
+  </table>
+</div>
+
+<!-- ══ BUDGET ANALYSIS ══ -->
+<div class="section-title">Budget Analysis — % of Total Revenue</div>
+<div class="budget-card">
+  <div class="budget-row">
+    <div class="budget-label">
+      <strong>Personal Draw</strong>
+      <span>$199,976 total</span>
+    </div>
+    <div class="budget-bar-wrap">
+      <div class="budget-bar" style="width:34.3%;background:var(--orange)"></div>
+    </div>
+    <div class="budget-pct" style="color:var(--orange)">34.3%</div>
+  </div>
+  <div class="budget-row">
+    <div class="budget-label">
+      <strong>Interactive Brokers</strong>
+      <span>$285,225 total</span>
+    </div>
+    <div class="budget-bar-wrap">
+      <div class="budget-bar" style="width:48.9%;background:var(--accent)"></div>
+    </div>
+    <div class="budget-pct" style="color:var(--accent)">48.9%</div>
+  </div>
+  <div class="budget-row">
+    <div class="budget-label">
+      <strong>Brex Card (Ops)</strong>
+      <span>$36,484 total</span>
+    </div>
+    <div class="budget-bar-wrap">
+      <div class="budget-bar" style="width:6.3%;background:var(--red)"></div>
+    </div>
+    <div class="budget-pct" style="color:var(--red)">6.3%</div>
+  </div>
+  <div class="budget-row">
+    <div class="budget-label">
+      <strong>Crypto / Kraken</strong>
+      <span>$17,500 total</span>
+    </div>
+    <div class="budget-bar-wrap">
+      <div class="budget-bar" style="width:3.0%;background:var(--yellow)"></div>
+    </div>
+    <div class="budget-pct" style="color:var(--yellow)">3.0%</div>
+  </div>
+  <div class="budget-row">
+    <div class="budget-label">
+      <strong>Professional Services</strong>
+      <span>$16,683 total</span>
+    </div>
+    <div class="budget-bar-wrap">
+      <div class="budget-bar" style="width:2.9%;background:var(--purple)"></div>
+    </div>
+    <div class="budget-pct" style="color:var(--purple)">2.9%</div>
+  </div>
+</div>
+
+<!-- ══ ALERTS ══ -->
+<div class="section-title">Key Flags & Observations</div>
+<div class="alerts">
+  <div class="alert good">
+    <strong>Exceptional Investment Rate</strong>
+    52% of all revenue was deployed into investments (IB + Kraken). This is well above the recommended 20–30% savings rate and indicates strong long-term wealth-building behaviour. Keep this discipline going.
+  </div>
+  <div class="alert warn">
+    <strong>Highly Variable Revenue — Budget to the Floor</strong>
+    Monthly revenue swings from $10,000 (Mar 2025) to $269,005 (Feb 2025). The 12-month average excluding that Feb outlier is ~$26,120/month. Always budget personal expenses against the lower floor (~$15–20k/month) rather than peak months — surplus should go straight to savings/investments.
+  </div>
+  <div class="alert danger">
+    <strong>Checking Account Running Dangerously Low</strong>
+    The checking account ended December 2025 at just $250.35. It has repeatedly dipped below $5,000. This leaves almost no buffer for unexpected business expenses or delayed revenue. A minimum $15,000–$20,000 operating reserve should be maintained in checking at all times.
+  </div>
+  <div class="alert danger">
+    <strong>January 2026 — Outsized Personal Draw ($88,907)</strong>
+    January 2026 saw $88,907 wired to your Revolut IE account — roughly 6–8× your typical monthly draw. This is a significant spike. If it was intentional (e.g. property purchase, large personal expense), ensure it was planned and will not recur unexpectedly. This single month accounts for 44% of all personal draws.
+  </div>
+  <div class="alert warn">
+    <strong>Brex Card Expenses Very Inconsistent</strong>
+    Monthly Brex Card payments ranged from $30 to $13,651. High months were April 2025 ($10,396) and January 2026 ($13,651). Review the detailed Brex card statements for one-off large charges and recurring subscriptions that could be trimmed. Target a consistent operating budget of $3,000–$5,000/month.
+  </div>
+  <div class="alert info">
+    <strong>Crypto Position — No Activity Since June 2025</strong>
+    $17,500 was sent to Kraken in May–Jun 2025 with no further purchases. Decide if you want a consistent crypto allocation strategy (e.g. monthly DCA) or if this was a one-time position. Your current portfolio split is roughly 94% equities (IB) and 6% crypto — consider whether this aligns with your risk appetite.
+  </div>
+  <div class="alert info">
+    <strong>MSI Auditors FZCO — Annual Budget Item</strong>
+    $16,683 was paid to MSI Auditors in Jun–Jul 2025. This looks like an annual accounting/compliance cost. Factor ~$17,000–$20,000 into your annual budget for professional services and set the funds aside in Treasury quarterly.
+  </div>
+  <div class="alert good">
+    <strong>Revolut IE Account — International Salary Structure</strong>
+    Your personal income routes through Brex (USD) → Revolut IE (EUR/GBP). This is a tax-efficient structure for international earners. Ensure your Revolut account and any currency conversions are captured in your personal tax filings, particularly given the large Jan 2026 transfer.
+  </div>
+</div>
+
+<!-- ══ RECOMMENDATIONS ══ -->
+<div class="section-title">Budget Framework & Recommendations</div>
+<div class="insights-grid">
+  <div class="insight-card">
+    <div class="icon">💰</div>
+    <h2>Conservative Monthly Budget</h2>
+    <p>Based on a reliable floor of <strong>$18–20k/month</strong> revenue:<br>
+    • Personal draw: <strong>$8,000–10,000</strong><br>
+    • IB / investments: <strong>$5,000–6,000</strong><br>
+    • Brex Card ops: <strong>$3,000–4,000</strong><br>
+    • Checking reserve: <strong>$2,000–3,000</strong><br>
+    Any surplus in strong months goes to IB.</p>
+  </div>
+  <div class="insight-card">
+    <div class="icon">🏦</div>
+    <h2>Maintain a Cash Reserve</h2>
+    <p>Your checking account should never fall below <strong>$15,000–20,000</strong>. Use the Brex Treasury account as a rolling 3-month expense buffer. Transfer excess to IB only after your reserve is met. This prevents the scramble visible in Dec 2025 ($250 balance).</p>
+  </div>
+  <div class="insight-card">
+    <div class="icon">📈</div>
+    <h2>Dollar-Cost Average into IB</h2>
+    <p>Instead of large lump-sum IB transfers ($194k in June), set up <strong>$5,000–10,000/month</strong> automatic transfers. DCA reduces timing risk, smooths cash flow, and removes the decision fatigue of when to invest. You can still deploy windfalls as lump sums on top.</p>
+  </div>
+  <div class="insight-card">
+    <div class="icon">📊</div>
+    <h2>Investment Portfolio Mix</h2>
+    <p>Current allocation: ~94% IB equities, ~6% crypto. Consider targeting:<br>
+    • <strong>80–85%</strong> equities (IB — diversified index funds)<br>
+    • <strong>10–15%</strong> crypto (Kraken — BTC/ETH core)<br>
+    • <strong>5%</strong> cash/Treasury buffer<br>
+    Rebalance semi-annually.</p>
+  </div>
+  <div class="insight-card">
+    <div class="icon">🧾</div>
+    <h2>Tax Reserve Strategy</h2>
+    <p>With $582k+ flowing through Your Glow Up LLC and large personal draws, maintain a <strong>tax reserve account</strong>. Recommend setting aside <strong>25–30% of net personal draws</strong> for taxes. IB gains may generate additional capital gains obligations — plan for this annually.</p>
+  </div>
+  <div class="insight-card">
+    <div class="icon">🔄</div>
+    <h2>Salary Consistency</h2>
+    <p>Set a <strong>fixed monthly salary</strong> of $8,000–10,000 from Your Glow Up LLC to your Revolut IE account. Currently your draw varies wildly ($0 to $88,907). A fixed salary makes personal budgeting predictable and signals financial structure to any future investors or lenders.</p>
+  </div>
+</div>
+
+<footer>
+  Data sourced from Your Glow Up LLC · Brex Business Checking Statements (Feb 2025 – Feb 2026) · For personal use only · Not financial advice
+</footer>
+
+<script>
+// ══════════════════════════════════════════════
+// DATA
+// ══════════════════════════════════════════════
+const allMonths = [
+  'Feb 25','Mar 25','Apr 25','May 25','Jun 25','Jul 25','Aug 25',
+  'Sep 25','Oct 25','Nov 25','Dec 25','Jan 26','Feb 26'
+];
+
+const data = {
+  revenue:      [269005, 10000, 42690, 14980, 11042, 19999, 21889, 50096, 23726, 20000, 20000, 41724, 37300],
+  personalDraw: [0,      0,     5100,  7500,  10000, 10369, 15000, 15000, 5000,  13000, 5000,  88907, 25100],
+  ibInvest:     [0,      0,     0,     0,     194001,0,     0,     30000, 5000,  7500,  17000, 10000, 21724],
+  crypto:       [0,      0,     0,     5000,  12500, 0,     0,     0,     0,     0,     0,     0,     0],
+  brexCard:     [0,      1986,  10396, 69,    30,    1409,  4152,  0,     482,   3219,  545,   13651, 545],
+  professional: [0,      0,     0,     0,     15717, 966,   0,     0,     0,     0,     0,     0,     0],
+  balance:      [5000,   13014, 4282,  1931,  3701,  10957, 13694, 9384,  7895,  1176,  250,   31724, 2955],
+};
+
+const idx2025 = [0,1,2,3,4,5,6,7,8,9,10];
+const idx2026 = [11,12];
+const idxAll  = [...idx2025, ...idx2026];
+
+// ══════════════════════════════════════════════
+// HELPERS
+// ══════════════════════════════════════════════
+function fmt(n) {
+  if (!n) return '—';
+  return '$' + n.toLocaleString('en-US', { maximumFractionDigits: 0 });
+}
+function fmtCell(n, cls) {
+  if (!n) return '<span class="dim">—</span>';
+  return `<span class="${cls}">${fmt(n)}</span>`;
+}
+function filterData(arr, indices) { return indices.map(i => arr[i]); }
+function getIndices(f) {
+  if (f === '2025') return idx2025;
+  if (f === '2026') return idx2026;
+  return idxAll;
+}
+
+// ══════════════════════════════════════════════
+// TABLE
+// ══════════════════════════════════════════════
+function buildTable(indices) {
+  const tbody = document.getElementById('detailBody');
+  tbody.innerHTML = '';
+  let t = { revenue:0, personalDraw:0, ibInvest:0, crypto:0, brexCard:0, professional:0 };
+
+  indices.forEach(i => {
+    const r = data;
+    Object.keys(t).forEach(k => t[k] += r[k][i]);
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${allMonths[i]}</td>
+      <td class="pos">${fmt(r.revenue[i])}</td>
+      <td>${fmtCell(r.personalDraw[i], 'neg')}</td>
+      <td>${fmtCell(r.ibInvest[i], 'blu')}</td>
+      <td>${fmtCell(r.crypto[i], 'ylw')}</td>
+      <td>${fmtCell(r.brexCard[i], 'neg')}</td>
+      <td>${fmtCell(r.professional[i], 'prp')}</td>
+      <td class="dim">${fmt(r.balance[i])}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td>TOTAL</td>
+    <td class="pos">${fmt(t.revenue)}</td>
+    <td class="neg">${fmt(t.personalDraw)}</td>
+    <td class="blu">${fmt(t.ibInvest)}</td>
+    <td class="ylw">${fmt(t.crypto)}</td>
+    <td class="neg">${fmt(t.brexCard)}</td>
+    <td class="prp">${fmt(t.professional)}</td>
+    <td class="dim">—</td>
+  `;
+  tbody.appendChild(tr);
+}
+
+// ══════════════════════════════════════════════
+// CHART SETUP
+// ══════════════════════════════════════════════
+Chart.defaults.color = '#8b949e';
+Chart.defaults.borderColor = '#21262d';
+
+const scalesXY = {
+  x: { grid:{ color:'#21262d' }, ticks:{ color:'#8b949e', font:{ size:11 } } },
+  y: { grid:{ color:'#21262d' }, ticks:{ color:'#8b949e', font:{ size:11 },
+    callback: v => v >= 1000 ? '$' + (v/1000).toFixed(0) + 'k' : '$' + v }}
+};
+
+let cashflowChart, stackedChart, balanceChart;
+
+// ── Cashflow bar ──
+function buildCashflowChart(indices) {
+  const ctx = document.getElementById('cashflowChart').getContext('2d');
+  const labels = filterData(allMonths, indices);
+  const rev = filterData(data.revenue, indices);
+  const out = indices.map(i =>
+    data.personalDraw[i] + data.ibInvest[i] + data.crypto[i] +
+    data.brexCard[i] + data.professional[i]
+  );
+  if (cashflowChart) cashflowChart.destroy();
+  cashflowChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label:'Revenue', data:rev, backgroundColor:'rgba(63,185,80,0.65)', borderColor:'#3fb950', borderWidth:1, borderRadius:4 },
+        { label:'Total Outflows', data:out, backgroundColor:'rgba(248,81,73,0.45)', borderColor:'#f85149', borderWidth:1, borderRadius:4 }
+      ]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ labels:{ color:'#8b949e', font:{ size:11 } } }, tooltip:{ mode:'index', intersect:false } },
+      scales: scalesXY
+    }
+  });
+}
+
+// ── Donut ──
+function buildDonutChart() {
+  const ctx = document.getElementById('donutChart').getContext('2d');
+  const totals = [199976, 285225, 36484, 17500, 16683];
+  const total = totals.reduce((a,b) => a+b, 0);
+  new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: ['Personal Draw','Interactive Brokers','Brex Card Ops','Crypto (Kraken)','Prof. Services'],
+      datasets:[{
+        data: totals,
+        backgroundColor:['#d29922','#58a6ff','#f85149','#e3b341','#bc8cff'],
+        borderColor:'#161b22', borderWidth:3, hoverOffset:6
+      }]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      cutout:'62%',
+      plugins:{
+        legend:{ position:'bottom', labels:{ color:'#8b949e', font:{ size:11 }, padding:14, boxWidth:12 } },
+        tooltip:{
+          callbacks:{
+            label: ctx => ` ${ctx.label}: ${fmt(ctx.raw)}  (${(ctx.raw/total*100).toFixed(1)}%)`
+          }
+        }
+      }
+    }
+  });
+}
+
+// ── Stacked bar ──
+function buildStackedChart(indices) {
+  const ctx = document.getElementById('stackedChart').getContext('2d');
+  const labels = filterData(allMonths, indices);
+  if (stackedChart) stackedChart.destroy();
+  stackedChart = new Chart(ctx, {
+    type:'bar',
+    data:{
+      labels,
+      datasets:[
+        { label:'Personal Draw',       data:filterData(data.personalDraw, indices), backgroundColor:'#d29922', borderRadius:3 },
+        { label:'Interactive Brokers', data:filterData(data.ibInvest, indices),     backgroundColor:'#58a6ff', borderRadius:3 },
+        { label:'Brex Card',           data:filterData(data.brexCard, indices),     backgroundColor:'#f85149', borderRadius:3 },
+        { label:'Crypto (Kraken)',     data:filterData(data.crypto, indices),       backgroundColor:'#e3b341', borderRadius:3 },
+        { label:'Prof. Services',      data:filterData(data.professional, indices), backgroundColor:'#bc8cff', borderRadius:3 },
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{ labels:{ color:'#8b949e', font:{ size:11 }, padding:14, boxWidth:12 } },
+        tooltip:{ mode:'index', intersect:false }
+      },
+      scales:{
+        x:{ stacked:true, grid:{ color:'#21262d' }, ticks:{ color:'#8b949e', font:{ size:11 } } },
+        y:{ stacked:true, grid:{ color:'#21262d' }, ticks:{ color:'#8b949e', font:{ size:11 },
+          callback: v => v >= 1000 ? '$' + (v/1000).toFixed(0) + 'k' : '$' + v }}
+      }
+    }
+  });
+}
+
+// ── Balance line ──
+function buildBalanceChart() {
+  const ctx = document.getElementById('balanceChart').getContext('2d');
+  balanceChart = new Chart(ctx, {
+    type:'line',
+    data:{
+      labels: allMonths,
+      datasets:[{
+        label:'Ending Balance',
+        data: data.balance,
+        borderColor:'#58a6ff',
+        backgroundColor:'rgba(88,166,255,0.08)',
+        borderWidth:2,
+        pointBackgroundColor:'#58a6ff',
+        pointRadius:4,
+        fill:true,
+        tension:0.3
+      },{
+        label:'$15k Reserve Target',
+        data: new Array(allMonths.length).fill(15000),
+        borderColor:'rgba(248,81,73,0.5)',
+        borderDash:[6,4],
+        borderWidth:1.5,
+        pointRadius:0,
+        fill:false
+      }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{ labels:{ color:'#8b949e', font:{ size:11 }, padding:14, boxWidth:12 } },
+        tooltip:{ mode:'index', intersect:false }
+      },
+      scales:{
+        x:{ grid:{ color:'#21262d' }, ticks:{ color:'#8b949e', font:{ size:11 } } },
+        y:{ grid:{ color:'#21262d' }, ticks:{ color:'#8b949e', font:{ size:11 },
+          callback: v => '$' + v.toLocaleString() }}
+      }
+    }
+  });
+}
+
+// ══════════════════════════════════════════════
+// FILTER
+// ══════════════════════════════════════════════
+function setFilter(filter, btn) {
+  document.querySelectorAll('#filterBtns .btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const indices = getIndices(filter);
+  buildCashflowChart(indices);
+  buildStackedChart(indices);
+  buildTable(indices);
+}
+
+// ══════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════
+window.addEventListener('load', () => {
+  buildCashflowChart(idxAll);
+  buildDonutChart();
+  buildStackedChart(idxAll);
+  buildBalanceChart();
+  buildTable(idxAll);
+});
+</script>
+</body>
+</html>
